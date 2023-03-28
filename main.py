@@ -2,6 +2,7 @@ from requests import get
 from bs4 import BeautifulSoup
 from datetime import datetime
 import csv
+import sqlite3
 
 routes = ['https://www.theverge.com',
           'https://www.theverge.com/tech',
@@ -14,9 +15,18 @@ routes = ['https://www.theverge.com',
 articles = []
 csv_data = ''
 
-csv_file = f"{datetime.today().strftime('%d%m%Y')}_verge.csv"
+file_name = f"{datetime.today().strftime('%d%m%Y')}_verge"
 fields = ['id', 'url', 'headline', 'author', 'date']
 rows = []
+
+conn = sqlite3.connect(file_name+'.db')
+crsr = conn.cursor()
+crsr.execute('''CREATE TABLE IF NOT EXISTS articles
+                (id INTEGER PRIMARY KEY,
+                 url TEXT,
+                 headline TEXT,
+                 author TEXT,
+                 date TEXT);''')
 
 for url in routes:
     response = get(url)
@@ -86,7 +96,13 @@ for article in articles:
 
     idc+=1
 
-with open(csv_file, 'w', newline='') as f:
+with open(file_name+'.csv', 'w', newline='') as f:
     csvwriter = csv.writer(f)
     csvwriter.writerow(fields)
     csvwriter.writerows(rows)
+
+for row in rows:
+    crsr.execute('''INSERT INTO articles (id, url, headline, author, date) VALUES (?, ?, ?, ?, ?)''', row)
+
+conn.commit()
+conn.close()
